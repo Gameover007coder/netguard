@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetGuard – Firewall Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+
+<!-- ─── Header ─────────────────────────────────────────────────── -->
+<header>
+    <div class="logo">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <h1>NetGuard</h1>
+    </div>
+    <div class="status">
+        <span id="conn-status" class="badge badge-warning">Connecting…</span>
+        <span id="uptime" class="meta"></span>
+    </div>
+</header>
+
+<!-- ─── Metric Cards ───────────────────────────────────────────── -->
+<section class="cards">
+    <div class="card stat-card">
+        <div class="card-label">↓ Download</div>
+        <div class="card-value" id="stat-rx">0 B/s</div>
+    </div>
+    <div class="card stat-card">
+        <div class="card-label">↑ Upload</div>
+        <div class="card-value" id="stat-tx">0 B/s</div>
+    </div>
+    <div class="card stat-card">
+        <div class="card-label">Active Connections</div>
+        <div class="card-value" id="stat-conns">0</div>
+    </div>
+    <div class="card stat-card">
+        <div class="card-label">Blocked Attempts</div>
+        <div class="card-value" id="stat-drops">0</div>
+    </div>
+    <div class="card stat-card">
+        <div class="card-label">Listening Ports</div>
+        <div class="card-value" id="stat-listen">0</div>
+    </div>
+</section>
+
+<!-- ─── Bandwidth Chart ────────────────────────────────────────── -->
+<section class="panel">
+    <h2>Live Bandwidth</h2>
+    <div class="chart-wrap">
+        <canvas id="bw-chart"></canvas>
+    </div>
+</section>
+
+<!-- ─── Active Connections ─────────────────────────────────────── -->
+<section class="panel">
+    <h2>Active Connections</h2>
+    <div class="table-wrap">
+        <table id="conn-table">
+            <thead>
+                <tr>
+                    <th>Process</th>
+                    <th>Proto</th>
+                    <th>Remote IP</th>
+                    <th>Domain</th>
+                    <th>Port</th>
+                    <th>State</th>
+                    <th>Country</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</section>
+
+<!-- ─── Blocked Inbound Attempts ───────────────────────────────── -->
+<section class="panel">
+    <h2>Blocked Inbound Attempts</h2>
+    <div class="grid-2col">
+        <div>
+            <h3>Recent Drops</h3>
+            <div class="table-wrap">
+                <table id="drop-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Source IP</th>
+                            <th>Port</th>
+                            <th>Proto</th>
+                            <th>Country</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        <div>
+            <h3>Top Attackers</h3>
+            <div class="chart-wrap-sm">
+                <canvas id="attacker-chart"></canvas>
+            </div>
+            <h3 style="margin-top:1rem;">Top Targeted Ports</h3>
+            <div class="chart-wrap-sm">
+                <canvas id="port-chart"></canvas>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ─── Listening Ports ────────────────────────────────────────── -->
+<section class="panel">
+    <h2>Listening Ports</h2>
+    <div class="table-wrap">
+        <table id="listen-table">
+            <thead>
+                <tr>
+                    <th>Port</th>
+                    <th>Label</th>
+                    <th>Address</th>
+                    <th>Process</th>
+                    <th>PID</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</section>
+
+<!-- ─── Manual Block / Unblock ─────────────────────────────────── -->
+<section class="panel">
+    <h2>Manual Block / Unblock</h2>
+    <div class="control-row">
+        <input type="text" id="manual-ip" placeholder="Enter IP address…" />
+        <button class="btn btn-danger" onclick="manualBlock()">Block</button>
+        <button class="btn btn-success" onclick="manualUnblock()">Unblock</button>
+    </div>
+    <h3 style="margin-top:1rem;">Currently Blocked IPs</h3>
+    <div id="blocked-list" class="tag-list"></div>
+</section>
+
+<!-- ─── Action Log ─────────────────────────────────────────────── -->
+<section class="panel">
+    <h2>Action History</h2>
+    <div class="table-wrap">
+        <table id="history-table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Action</th>
+                    <th>IP</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</section>
+
+<footer>
+    <p>NetGuard – Local Firewall Dashboard · Bound to 127.0.0.1 · Data stays on your machine</p>
+</footer>
+
+<script src="/static/dashboard.js"></script>
+</body>
+</html>
+

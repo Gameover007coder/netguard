@@ -1,0 +1,27 @@
+[Unit]
+Description=NetGuard – Firewall & Live Traffic Dashboard
+After=network.target nftables.service
+Wants=nftables.service
+
+[Service]
+Type=simple
+ExecStart=/opt/netguard/venv/bin/python /opt/netguard/app.py
+WorkingDirectory=/opt/netguard
+Environment=NETGUARD_HOST=127.0.0.1
+Environment=NETGUARD_PORT=5000
+
+# Security hardening
+NoNewPrivileges=false
+ProtectSystem=strict
+ReadWritePaths=/opt/netguard
+PrivateTmp=true
+
+# Needs root for nft, conntrack, and raw sockets
+User=root
+
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
