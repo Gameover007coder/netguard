@@ -99,7 +99,9 @@ load_firewall() {
     systemctl enable nftables > /dev/null 2>&1 || true
     systemctl start nftables > /dev/null 2>&1 || true
 
-    # Load our rules
+    # Replace only the NetGuard table; preserve unrelated host firewall rules.
+    nft delete table inet myfw 2>/dev/null || true
+    nft -c -f "${INSTALL_DIR}/firewall/firewall.nft"
     nft -f "${INSTALL_DIR}/firewall/firewall.nft"
 
     info "Firewall rules loaded. Inspect with: sudo nft list ruleset"
