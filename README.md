@@ -117,4 +117,3 @@ curl https://example.com
 ## License
 
 MIT
-
