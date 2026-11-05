@@ -140,6 +140,7 @@ const portChart = new Chart(portCtx, {
 
 // ── Main Update Handler ─────────────────────────────────────────
 let totalDrops = 0;
+const seenDropEvents = new Set();
 
 socket.on("update", (data) => {
     const now = new Date().toLocaleTimeString();
@@ -148,7 +149,19 @@ socket.on("update", (data) => {
     document.getElementById("stat-rx").textContent = fmtBytes(data.totals.rx_bps || 0);
     document.getElementById("stat-tx").textContent = fmtBytes(data.totals.tx_bps || 0);
     document.getElementById("stat-conns").textContent = (data.connections || []).length;
-    totalDrops += (data.drops || []).length;
+    // Recent drop records overlap between updates; count each event only once.
+    for (const drop of (data.drops || [])) {
+        const key = [drop.timestamp, drop.src_ip, drop.dst_ip, drop.src_port, drop.dst_port].join("|");
+        if (!seenDropEvents.has(key)) {
+            seenDropEvents.add(key);
+            totalDrops += 1;
+        }
+    }
+    if (seenDropEvents.size > 2000) {
+        const keep = Array.from(seenDropEvents).slice(-1000);
+        seenDropEvents.clear();
+        keep.forEach(key => seenDropEvents.add(key));
+    }
     document.getElementById("stat-drops").textContent = totalDrops;
     document.getElementById("stat-listen").textContent = (data.listening || []).length;
 
