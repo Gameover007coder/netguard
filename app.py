@@ -11,6 +11,7 @@ import ipaddress
 import json
 import logging
 import os
+from urllib.parse import urlparse
 import sqlite3
 import subprocess
 import threading
@@ -18,7 +19,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, abort
 from flask_socketio import SocketIO
 
 from collectors import connections, dropped, dns_sniffer, traffic, geo
@@ -96,9 +97,11 @@ def _db_log_traffic(rx: float, tx: float):
 def _validate_ip(ip_str: str) -> str | None:
     """Return a normalized IP string, or None if invalid."""
     try:
+        if not isinstance(ip_str, str):
+            return None
         addr = ipaddress.ip_address(ip_str.strip())
-        # Refuse loopback, link-local, or private as targets to block
-        if addr.is_loopback:
+        # Private LAN addresses remain blockable; reject special-purpose targets.
+        if addr.is_loopback or addr.is_link_local or addr.is_multicast or addr.is_unspecified:
             return None
         return str(addr)
     except ValueError:
@@ -157,6 +160,22 @@ def _nft_list_blocked() -> list[str]:
     return blocked
 
 
+# ── Local-only control protection ─────────────────────────────────
+@app.before_request
+def protect_control_api():
+    if request.path in {'/api/block', '/api/unblock'} and request.method == 'POST':
+        origin = request.headers.get('Origin')
+        if origin:
+            try:
+                origin_host = (urlparse(origin).hostname or '').lower()
+            except ValueError:
+                abort(403)
+            if origin_host not in {'127.0.0.1', 'localhost', '::1'}:
+                abort(403)
+        if request.headers.get('Sec-Fetch-Site') == 'cross-site':
+            abort(403)
+
+
 # ── Routes ─────────────────────────────────────────────────────────
 @app.route("/")
 def index():
@@ -199,7 +218,9 @@ def api_blocked():
 
 @app.route("/api/block", methods=["POST"])
 def api_block():
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"ok": False, "error": "Expected a JSON object"}), 400
     raw_ip = data.get("ip", "")
     ip = _validate_ip(raw_ip)
     if ip is None:
